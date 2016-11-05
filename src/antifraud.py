@@ -1,6 +1,7 @@
 # Written by Gene Der Su for Insight Coding Challenge.
 
 import sys
+import copy
 
 class Graph:
     """
@@ -58,9 +59,28 @@ class Graph:
             finding the common second degree vertices from both ends. 
             Return "trusted" if they are, "unverified" if not.
         """
-        pass
-                
-        
+        # check id1 might not be in the graph
+        if id1 in self.graph:
+            # find all vertices within 2 degree of separation from id1
+            set1 = self.graph[id1]
+            for i in copy.copy(set1):
+                set1 = set1.union(self.graph[i])
+        else:
+            return "unverified"
+
+        # check id2 might not be in the graph
+        if id1 in self.graph:
+            # find all vertices within 2 degree of separation from id2
+            set2 = self.graph[id2]
+            for i in copy.copy(set2):
+                set2 = set2.union(self.graph[i])
+        else:
+            return "unverified"
+
+        # check if there are common 2 second degree of separations
+        if len(set1.intersection(set2)):
+            return "trusted"
+        return "unverified"
 
 def main(batch_data, stream_data, output1, output2, output3):
     """

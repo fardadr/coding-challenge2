@@ -22,23 +22,37 @@ class Graph:
                 id1 = row_split[1]
                 id2 = row_split[2]
                 if id1 in self.graph:
-                    if id2 not in self.graph[id1]:
-                        self.graph[id1].add(id2)
+                    self.graph[id1].add(id2)
                 else:
                     self.graph[id1] = set([id2])
                 if id2 in self.graph:
-                    if id1 not in self.graph[id2]:
-                        self.graph[id2].add(id1)
+                    self.graph[id2].add(id1)
                 else:
                     self.graph[id2] = set([id1])
                     
-    def feature1(id1, id2):
+    def feature1(self, id1, id2):
+        """
+            Check whether id1 and id2 are connected in the graph.
+            Return "trusted" if they are, "unverified" if not.
+        """
+        if id1 in self.graph:
+            if id2 in self.graph[id1]:
+                return "trusted"
+        return "unverified"
+
+    def feature2(self, id1, id2):
+        """
+            Check whether id1 and id2 has common connection the graph.
+            Return "trusted" if they are, "unverified" if not.
+        """
         pass
 
-    def feature2(id1, id2):
-        pass
-
-    def feature3(id1, id2):
+    def feature3(self, id1, id2):
+        """
+            Check whether id1 and id2 are connected within 4 degrees
+            of separation the graph. return "trusted" if they are,
+            "unverified" if not.
+        """
         pass
                 
         

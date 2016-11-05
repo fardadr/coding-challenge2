@@ -45,13 +45,18 @@ class Graph:
             Check whether id1 and id2 has common connection the graph.
             Return "trusted" if they are, "unverified" if not.
         """
-        pass
+        # id1 and id2 might not be in the graph
+        if id1 in self.graph and id2 in self.graph:
+            if len(self.graph[id1].intersection(self.graph[id2])) > 0:
+                return "trusted"
+        return "unverified"
 
     def feature3(self, id1, id2):
         """
             Check whether id1 and id2 are connected within 4 degrees
-            of separation the graph. return "trusted" if they are,
-            "unverified" if not.
+            of separation the graph. Trying to save some space by
+            finding the common second degree vertices from both ends. 
+            Return "trusted" if they are, "unverified" if not.
         """
         pass
                 

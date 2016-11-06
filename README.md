@@ -1,3 +1,5 @@
+# Coded by Gene Der Su in Pyhton 2.7 using no addition libraries
+
 # Table of Contents
 
 1. [Challenge Summary] (README.md#challenge-summary)

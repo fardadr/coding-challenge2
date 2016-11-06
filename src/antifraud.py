@@ -6,16 +6,31 @@ import time
 
 class Graph:
     """
-        This class is a compiles a graph with the given batch_data.
-        It uses dictionary to represent the edges. Each vertex has
-        a key in the directionary. All the neighboring vertices are
-        stored as set as values.
+        This class compiles a dictionary of first degree connections
+        and another dictionary for second degree connections for all
+        vercites with the given batch_data. Each vertex has a key in
+        the directionary. All the satisfying vertices are stored as a
+        set as values. There are also three class methods, one for
+        each feature. Also there is a helper function for feature 3
+        to early termination the intersection checking process.
+
+        The code is optmized for runtime. The overhead for a large
+        file might be high as to pre-computer all the second degree
+        of separations, but it will be fast for each stream action.
+
+        On a mid 2015 MacBook Pro with 2.8 GHz Intel Core i7, it will
+        take around 3 minutes for the preprocessing of a file with
+        close to 4 million lines in the batch_payment.txt. The runtime
+        for each stream_payment is around 1.1e-05 seconds.
     """
     def __init__(self, batch_data):
         """
             Initialize the object with the given batch_data.
-            Stores dictionary of sets for each transaction.
+            Store dictionary of sets for each transaction.
+            Compute second degree of separations for each node.
         """
+        # genearte dictionary of first degree of separations
+        t = time.time()
         self.graph = {}
         with open(batch_data, 'r') as batch:
             next(batch)
@@ -31,13 +46,25 @@ class Graph:
                     self.graph[id2].add(id1)
                 else:
                     self.graph[id2] = set([id1])
+
+        # report status
+        num_nodes = len(self.graph)
+        print "First degree graph generated, total %s nodes, time used: %ss"%(num_nodes, time.time() - t)
         
+        # compute second degree of separations
+        count = 0
         self.graph2 = {}
         for i in self.graph:
             self.graph2[i] = self.graph[i]
             for j in self.graph[i]:
-                self.graph2[i].union(self.graph[j])
+                self.graph2[i] = self.graph2[i].union(self.graph[j])
             self.graph2[i].add(i)
+            
+            # increment count and print the process so the user know
+            # the program is actually running
+            count += 1
+            if count % 1000 == 0:
+                print "Processing second degree graph: %s/%s"%(count, num_nodes)
 
                     
     def feature1(self, id1, id2):
@@ -45,6 +72,7 @@ class Graph:
             Check whether id1 and id2 are connected in the graph.
             Return True if they are, False if not.
         """
+        # id1 might not be in the graph
         if id1 in self.graph:
             if id2 in self.graph[id1]:
                 return True
@@ -53,21 +81,7 @@ class Graph:
         
     def feature2(self, id1, id2):
         """
-            Check whether id1 and id2 has common connection the graph.
-            Return "trusted" if they are, "unverified" if not.
-        """
-##        # check for the first degree connection
-##        if self.feature1(id1, id2) == "trusted\n":
-##            return "trusted\n"
-##    
-##        # id1 and id2 might not be in the graph
-##        if id1 in self.graph and id2 in self.graph:
-##            if self.check_intersection(self.graph[id1],self.graph[id2]):
-##                return "trusted\n"
-##        return "unverified\n"
-    
-        """
-            Check whether id2 is within 2 degree of separations
+            Check whether id2 is within second degree of separations
             of id1 using per-computed second degree graph. Return
             True if they are, False if not.
         """
@@ -80,8 +94,10 @@ class Graph:
 
     def check_intersection(self, set1, set2):
         """
-            Given 2 sets, return True if there is at least one
-            interection, else return False.
+            Helper function for early termination of check any
+            intersection nodes for feature3. Given 2 sets, return
+            True if there is at least one interection node, else
+            return False.
         """
         for i in set1:
             if i in set2:
@@ -92,98 +108,78 @@ class Graph:
     def feature3(self, id1, id2):
         """
             Check whether id1 and id2 are connected within 4 degrees
-            of separation the graph. Trying to save some space by
-            finding the common second degree vertices from both ends. 
-            Return "trusted" if they are, "unverified" if not.
+            of separations the graph. Check by finding whether there
+            are interection second degree of separations from both
+            nodes. Return True if they are, False if not.
         """
-        
-##        # check for the first degree of separation
-##        if self.feature1(id1, id2) == "trusted\n":
-##            return "trusted\n"
-##        
-##        # check id1 might not be in the graph
-##        if id1 in self.graph:
-##            # find all vertices within 2 degree of separation from id1
-##            set1 = self.graph[id1]
-##            for i in copy.copy(set1):
-##                set1 = set1.union(self.graph[i])
-##            set1.add(id1)
-##        else:
-##            return "unverified\n"
-##
-##        # check if id2 in second degree of separations
-##        if id2 in set1:
-##            return "trusted\n"
-##
-##        # check id2 might not be in the graph
-##        if id2 in self.graph:
-##            # find all vertices within 2 degree of separation from id2
-##            set2 = self.graph[id2]
-##            for i in copy.copy(set2):
-##                set2 = set2.union(self.graph[i])
-##            set2.add(id2)
-##        else:
-##            return "unverified\n"
-##        # check if there are common 2 second degree of separations
-##        if self.check_intersection(set1, set2):
-##            return "trusted\n"
-##        return "unverified\n"
-
         # id1 and id2 might not be in the graph
         if id1 in self.graph2 and id2 in self.graph2:
             if self.check_intersection(self.graph2[id1], self.graph2[id2]):
                 return True
         return False
 
-        
-
 
 def main(batch_data, stream_data, output1, output2, output3):
     """
         This program will create a graph object from the batch_data.
-        It will go though stream_data and export to output1, output2,
+        It will go through stream_data and export to output1, output2,
         and output3 line by line. All the arguments are assumed to be
-        vaild file path. 
+        vaild file paths with correct formatting. 
     """
+    # create the graph object and also calculate the time.
+    # took around 3 minutes on my computer for a file close
+    # to 4 million lines
     t0 = time.time()
     batch_graph = Graph(batch_data)
-    print "\nTime used to create graph: %ss\n"%(time.time() - t0)
+    print "\nTime used to create graphs: %ss\n"%(time.time() - t0)
 
-    t0 = time.time()
-    counter = 0
-    with open(stream_data,'r') as stream, \
-         open(output1,'w') as f1,\
-         open(output2,'w') as f2,\
-         open(output3,'w') as f3:
+    with open(stream_data, 'r') as stream, \
+         open(output1, 'w') as f1,\
+         open(output2, 'w') as f2,\
+         open(output3, 'w') as f3:
+        
         next(stream)
-        
+        counter = 0
         t0 = time.time()
-        
         for row in stream:
             row_split = row.strip().split(',')
             id1 = row_split[1]
             id2 = row_split[2]
-            current_feature1 = batch_graph.feature1(id1,id2)
-            if batch_graph.feature1(id1,id2):
+            
+            # compute feature1, if feature 1 passes, all shold pass
+            current_feature1 = batch_graph.feature1(id1, id2)
+            if batch_graph.feature1(id1, id2):
                 f1.write("trusted\n")
                 f2.write("trusted\n")
                 f3.write("trusted\n")
             else:
+                
+                # when feature 1 did not pass, check feature 2
                 f1.write("unverified\n")
+                
+                # if feature 2 passes, both feature 2 and 3 are passed
                 if batch_graph.feature2(id1,id2):
                     f2.write("trusted\n")
                     f3.write("trusted\n")
                 else:
+
+                    # when feature 2 also did not pass, check feature 3
                     f2.write("unverified\n")
+                    
+                    # assign the result depend on the feature3 outcome
                     if batch_graph.feature3(id1,id2):
                         f3.write("trusted\n")
                     else:
                         f3.write("unverified\n")
+                        
+            # increment counter and print the count so the user know
+            # the program is actually running
             counter += 1
-            if counter % 100000 == 0:
-                print "Row count:", counter
+            if counter % 200000 == 0:
+                print "Stream payments count:", counter
 
-    print "\nAll feature completed, total %s rows, average time %s s/row"%(counter, (time.time() - t0)/counter)
+    # report the number of payment processed and the performance
+    print "\nAll feature completed, total %s stream payments, average time %s s/payment\n"%(counter, (time.time() - t0)/counter)
 
 
 if __name__ == "__main__":
